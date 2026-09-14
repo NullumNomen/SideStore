@@ -60,7 +60,12 @@ final class VerifyCertificateOperation: BasePipelineOperation<InstallAppOperatio
                 guard let installedApp = self.context.installedApp else {
                     throw OperationError.invalidParameters("VerifyCertificateOperation: installedApp is missing in context.")
                 }
-                guard let lastSigningCert = CertificateManager.shared.getSigningCertificate(for: installedApp) else {
+                // ponytail: LiveContainer's embedded SideStore is ad-hoc signed, so its Mach-O
+                // cannot carry the Apple certificate used by this authenticated refresh pipeline.
+                let lastSigningCert = CertificateManager.shared.getSigningCertificate(for: installedApp)
+                    ?? self.context.targetSigningCertificate?.x509
+                    ?? CertificateManager.shared.activeCertificate?.certificate.x509
+                guard let lastSigningCert else {
                     throw OperationError.invalidParameters("Could not locate signing certificate for '\(appName)'.")
                 }
                 
